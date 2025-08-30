@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'sign_up.dart'; 
+import '../homepage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -9,22 +12,21 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
+  final _username = TextEditingController();
   final _password = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
 
   @override
   void dispose() {
-    _email.dispose();
+    _username.dispose();
     _password.dispose();
     super.dispose();
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Email is required';
-    final emailOk = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value.trim());
-    if (!emailOk) return 'Enter a valid email';
+  String? _validateUsername(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Username is required';
+    if (value.length < 4) return 'Min 4 characters';
     return null;
   }
 
@@ -34,24 +36,60 @@ class _SignInPageState extends State<SignInPage> {
     return null;
   }
 
-  Future<void> _onSignIn() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _onSignIn() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _loading = true);
+  setState(() => _loading = true);
 
-    // TODO: replace this with real auth (Firebase, API, etc.)
-    await Future.delayed(const Duration(seconds: 1));
+  try {
+    String input = _username.text.trim();
+    String? email;
 
+    final isEmail = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(input);
+
+    if (isEmail) {
+      email = input;
+    } else {
+      // Step 2: Lookup email by username
+      final response = await Supabase.instance.client
+          .from('account')
+          .select('email')
+          .eq('username', input)
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('No account found with this username');
+      }
+      email = response['email'] as String;
+    }
+
+    final authResponse = await Supabase.instance.client.auth.signInWithPassword(
+      email: email,
+      password: _password.text.trim(),
+    );
+
+    if (authResponse.user == null) {
+      throw Exception('Invalid username/email or password');
+    }
+
+    // If success
     if (!mounted) return;
-    setState(() => _loading = false);
-
-    // Navigate to a placeholder home page for now
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const _HomePlaceholder(),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          e.toString().replaceFirst('Exception: ', ''), 
+        ),
       ),
     );
+  } finally {
+    if (mounted) setState(() => _loading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +112,7 @@ class _SignInPageState extends State<SignInPage> {
                       height: 120, // adjust size as needed
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     'Welcome to NutriDiet',
                     style: Theme.of(context).textTheme.headlineSmall,
@@ -82,14 +120,13 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _username,
                     decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
                       border: OutlineInputBorder(),
                     ),
-                    validator: _validateEmail,
+                    validator: _validateUsername,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -137,8 +174,8 @@ class _SignInPageState extends State<SignInPage> {
                       const Text("Don't have an account?"),
                       TextButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Go to Sign up')),
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SignUpPage()),
                           );
                         },
                         child: const Text('Sign up'),
@@ -155,10 +192,6 @@ class _SignInPageState extends State<SignInPage> {
   }
 }
 
-// Simple placeholder home page to verify navigation works
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,4 +199,4 @@ class _HomePlaceholder extends StatelessWidget {
       body: const Center(child: Text('Signed in! This is your home page.')),
     );
   }
-}
+
