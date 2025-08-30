@@ -1,7 +1,9 @@
+// lib/screen/auth/sign_in.dart
 import 'package:flutter/material.dart';
-import 'sign_up.dart'; 
-import '../homepage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/auth_service.dart';
+import 'sign_up.dart';
+import '../homepage.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -12,84 +14,52 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   final _formKey = GlobalKey<FormState>();
-  final _username = TextEditingController();
+  final _input = TextEditingController(); 
   final _password = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
+  final _auth = AuthService();
 
   @override
   void dispose() {
-    _username.dispose();
+    _input.dispose();
     _password.dispose();
     super.dispose();
   }
 
-  String? _validateUsername(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Username is required';
-    if (value.length < 4) return 'Min 4 characters';
-    return null;
+  void _showMessage(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required';
-    if (value.length < 6) return 'Min 6 characters';
-    return null;
-  }
+  Future<void> _onSignIn() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
 
-Future<void> _onSignIn() async {
-  if (!_formKey.currentState!.validate()) return;
+    try {
+      await _auth.signInWithUsernameOrEmail(
+        input: _input.text,
+        password: _password.text,
+      );
 
-  setState(() => _loading = true);
-
-  try {
-    String input = _username.text.trim();
-    String? email;
-
-    final isEmail = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(input);
-
-    if (isEmail) {
-      email = input;
-    } else {
-      // Step 2: Lookup email by username
-      final response = await Supabase.instance.client
-          .from('account')
-          .select('email')
-          .eq('username', input)
-          .maybeSingle();
-
-      if (response == null) {
-        throw Exception('No account found with this username');
-      }
-      email = response['email'] as String;
-    }
-
-    final authResponse = await Supabase.instance.client.auth.signInWithPassword(
-      email: email,
-      password: _password.text.trim(),
-    );
-
-    if (authResponse.user == null) {
-      throw Exception('Invalid username/email or password');
-    }
-
-    // If success
-    if (!mounted) return;
+      // success → go to home
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          e.toString().replaceFirst('Exception: ', ''), 
-        ),
-      ),
-    );
-  } finally {
-    if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      String message = 'Login failed';
+      if (e is PostgrestException) message = e.message;
+      else message = e.toString();
+      _showMessage(message.replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
-}
+
+  String? _validateInput(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Enter username or Email';
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,12 +76,7 @@ Future<void> _onSignIn() async {
                 shrinkWrap: true,
                 children: [
                   const SizedBox(height: 24),
-                  Center(
-                    child: Image.asset(
-                      'assets/logo.png',
-                      height: 120, // adjust size as needed
-                    ),
-                  ),
+                  Image.asset('assets/logo.png', height: 120),
                   const SizedBox(height: 12),
                   Text(
                     'Welcome to NutriDiet',
@@ -120,13 +85,13 @@ Future<void> _onSignIn() async {
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
-                    controller: _username,
+                    controller: _input,
                     decoration: const InputDecoration(
-                      labelText: 'Username',
+                      labelText: 'Username / Email',
                       prefixIcon: Icon(Icons.person),
                       border: OutlineInputBorder(),
                     ),
-                    validator: _validateUsername,
+                    validator: _validateInput,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -141,19 +106,19 @@ Future<void> _onSignIn() async {
                         icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
                       ),
                     ),
-                    validator: _validatePassword,
+                    validator: (v) => v == null || v.isEmpty ? 'Enter password' : null,
                   ),
                   const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Forgot password tapped')),
-                        );
-                      },
-                      child: const Text('Forgot password?'),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          _showMessage('Forgot password: implement reset flow later');
+                        },
+                        child: const Text('Forgot password?'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
@@ -161,9 +126,7 @@ Future<void> _onSignIn() async {
                     child: FilledButton(
                       onPressed: _loading ? null : _onSignIn,
                       child: _loading
-                          ? const SizedBox(
-                              height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Text('Sign in'),
                     ),
                   ),
@@ -191,12 +154,3 @@ Future<void> _onSignIn() async {
     );
   }
 }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('NutriDiet Home')),
-      body: const Center(child: Text('Signed in! This is your home page.')),
-    );
-  }
-

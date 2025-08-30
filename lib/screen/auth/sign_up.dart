@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'sign_in.dart'; 
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'sign_in.dart';
+import '../../services/auth_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -11,7 +11,6 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
-
   final _username = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -20,9 +19,9 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _gender;
   final _height = TextEditingController();
   final _weight = TextEditingController();
-
   bool _obscure = true;
   bool _loading = false;
+  final _auth = AuthService();
 
   @override
   void dispose() {
@@ -36,93 +35,88 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  String? _validateUsername(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Username is required';
-    if (value.length < 4) return 'Min 4 characters';
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required';
-    if (value.length < 6) return 'Min 6 characters';
-    return null;
-  }
-
-  String? _validateEmail(String? v) {
-  if (v == null || v.trim().isEmpty) return 'Email is required';
-  final ok = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(v.trim());
-  if (!ok) return 'Enter a valid email';
-  return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value != _password.text) return 'Passwords do not match';
-    return null;
-  }
-
-  String? _validateBirthday(String? value) {
-    if (value == null || value.isEmpty) return 'Birthday is required';
-    return null;
-  }
-
-  String? _validateHeight(String? value) {
-    if (value == null || value.isEmpty) return 'Height is required';
-    final h = double.tryParse(value);
-    if (h == null || h <= 0) return 'Enter valid height';
-    return null;
-  }
-
-  String? _validateWeight(String? value) {
-    if (value == null || value.isEmpty) return 'Weight is required';
-    final w = double.tryParse(value);
-    if (w == null || w <= 0) return 'Enter valid weight';
-    return null;
-  }
+  void _showMessage(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   Future<void> _onSignUp() async {
     if (!_formKey.currentState!.validate()) return;
-
+    if (_password.text != _confirmPassword.text) {
+      _showMessage('Passwords do not match');
+      return;
+    }
     setState(() => _loading = true);
 
     try {
-      final authResponse = await Supabase.instance.client.auth.signUp(
-        email: _email.text.trim(),
-        password: _password.text.trim(),
+      await _auth.signUpAndCreateProfile(
+        username: _username.text,
+        email: _email.text,
+        password: _password.text,
+        birthday: _birthday.text.isEmpty ? null : _birthday.text,
+        gender: _gender,
+        height: double.tryParse(_height.text),
+        weight: double.tryParse(_weight.text),
       );
 
-      if (authResponse.user != null) {
-        await Supabase.instance.client
-            .from('account')
-            .insert({
-              'user_id': authResponse.user!.id, 
-              'username': _username.text.trim(),
-              'email': _email.text.trim(),
-              'birthday': _birthday.text.trim(),
-              'gender': _gender,
-              'height': double.tryParse(_height.text),
-              'weight': double.tryParse(_weight.text),
-            })
-            .select();
-
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully! Sign in to start your health journey now.')),
-        );
-
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SignInPage()),
-        );
-      }
-    } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+      _showMessage('Account created successfully! Sign in to start your journey now.');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SignInPage()),
       );
+    } catch (e) {
+      String msg = e.toString();
+      if (msg.contains('duplicate') || msg.toLowerCase().contains('unique')) {
+        msg = 'Username or email already exists.';
+      }
+      _showMessage(msg.replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
-  
+
+  String? _validateUsername(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Username is required';
+    if (v.length < 2) return 'Min 2 characters';
+    return null;
+  }
+
+  String? _validateEmail(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Email required';
+    final ok = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(v);
+    if (!ok) return 'Enter a valid email';
+    return null;
+  }
+
+  String? _validatePassword(String? v) {
+    if (v == null || v.isEmpty) return 'Password required';
+    if (v.length < 6) return 'Min 6 characters';
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? v) {
+    if (v == null || v.isEmpty) return 'Confirm password required';
+    if (v != _password.text) return 'Passwords do not match';
+    return null;
+  }
+
+  String? _validateBirthday(String? v) {
+    if (v == null || v.isEmpty) return 'Birthday required';
+    return null;
+  }
+
+  String? _validateHeight(String? v) {
+    if (v == null || v.isEmpty) return 'Height required';
+    final h = double.tryParse(v);
+    if (h == null || h <= 0) return 'Enter a valid height';
+    return null;
+  }
+
+  String? _validateWeight(String? v) {
+    if (v == null || v.isEmpty) return 'Weight required';
+    final w = double.tryParse(v);
+    if (w == null || w <= 0) return 'Enter a valid weight';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,7 +151,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         onPressed: () => setState(() => _obscure = !_obscure),
-                        icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(
+                          _obscure ? Icons.visibility : Icons.visibility_off,
+                        ),
                       ),
                     ),
                     validator: _validatePassword,
@@ -165,11 +161,15 @@ class _SignUpPageState extends State<SignUpPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmPassword,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscure, // <-- use same flag as password
+                    decoration: InputDecoration(
                       labelText: 'Confirm Password',
-                      prefixIcon: Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                        icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                      ),
                     ),
                     validator: _validateConfirmPassword,
                   ),
@@ -201,7 +201,8 @@ class _SignUpPageState extends State<SignUpPage> {
                         initialDate: DateTime(2000),
                       );
                       if (date != null) {
-                        _birthday.text = "${date.year}-${date.month}-${date.day}";
+                        _birthday.text =
+                            "${date.year}-${date.month}-${date.day}";
                       }
                     },
                     validator: _validateBirthday,
@@ -213,7 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       prefixIcon: Icon(Icons.wc),
                       border: OutlineInputBorder(),
                     ),
-                    value: _gender, 
+                    value: _gender,
                     items: const [
                       DropdownMenuItem(value: 'Male', child: Text('Male')),
                       DropdownMenuItem(value: 'Female', child: Text('Female')),
