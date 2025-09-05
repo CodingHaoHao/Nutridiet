@@ -19,7 +19,8 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _gender;
   final _height = TextEditingController();
   final _weight = TextEditingController();
-  bool _obscure = true;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _loading = false;
   final _auth = AuthService();
 
@@ -144,15 +145,15 @@ class _SignUpPageState extends State<SignUpPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _password,
-                    obscureText: _obscure,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscure = !_obscure),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         icon: Icon(
-                          _obscure ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
                         ),
                       ),
                     ),
@@ -161,14 +162,14 @@ class _SignUpPageState extends State<SignUpPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmPassword,
-                    obscureText: _obscure, // <-- use same flag as password
+                    obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                        icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                        icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
                       ),
                     ),
                     validator: _validateConfirmPassword,

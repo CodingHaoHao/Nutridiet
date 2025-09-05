@@ -1,9 +1,8 @@
-// lib/screen/auth/sign_in.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/auth_service.dart';
-import 'sign_up.dart';
 import '../homepage.dart';
+import 'sign_up.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
