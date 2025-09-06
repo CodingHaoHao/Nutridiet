@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'sign_in.dart';
 import '../../services/auth_service.dart';
+
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -104,20 +106,6 @@ class _SignUpPageState extends State<SignUpPage> {
     return null;
   }
 
-  String? _validateHeight(String? v) {
-    if (v == null || v.isEmpty) return 'Height required';
-    final h = double.tryParse(v);
-    if (h == null || h <= 0) return 'Enter a valid height';
-    return null;
-  }
-
-  String? _validateWeight(String? v) {
-    if (v == null || v.isEmpty) return 'Weight required';
-    final w = double.tryParse(v);
-    if (w == null || w <= 0) return 'Enter a valid weight';
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,6 +131,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: _validateUsername,
                   ),
                   const SizedBox(height: 16),
+
                   TextFormField(
                     controller: _password,
                     obscureText: _obscurePassword,
@@ -160,6 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: _validatePassword,
                   ),
                   const SizedBox(height: 16),
+                  
                   TextFormField(
                     controller: _confirmPassword,
                     obscureText: _obscureConfirmPassword,
@@ -209,6 +199,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: _validateBirthday,
                   ),
                   const SizedBox(height: 16),
+
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
                       labelText: 'Gender',
@@ -225,28 +216,125 @@ class _SignUpPageState extends State<SignUpPage> {
                         value == null ? 'Please select gender' : null,
                   ),
                   const SizedBox(height: 16),
+    
                   TextFormField(
                     controller: _height,
-                    keyboardType: TextInputType.number,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Height (cm)',
                       prefixIcon: Icon(Icons.height),
                       border: OutlineInputBorder(),
                     ),
-                    validator: _validateHeight,
+                    onTap: () async {
+                      final selectedHeight = await showModalBottomSheet<int>(
+                        context: context,
+                        builder: (ctx) {
+                          int tempHeight = int.tryParse(_height.text) ?? 170;
+                          return Container(
+                            height: 250,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    itemExtent: 40,
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: tempHeight - 100,
+                                    ),
+                                    onSelectedItemChanged: (index) {
+                                      tempHeight = 100 + index;
+                                    },
+                                    children: List.generate(
+                                      121, 
+                                      (index) => Center(
+                                        child: Text('${100 + index} cm'),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx), 
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, tempHeight),
+                                      child: const Text("OK"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      if (selectedHeight != null) {
+                        setState(() => _height.text = selectedHeight.toString());
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _weight,
-                    keyboardType: TextInputType.number,
+                    readOnly: true,
                     decoration: const InputDecoration(
                       labelText: 'Weight (kg)',
                       prefixIcon: Icon(Icons.monitor_weight),
                       border: OutlineInputBorder(),
                     ),
-                    validator: _validateWeight,
+                    onTap: () async {
+                      final selectedWeight = await showModalBottomSheet<int>(
+                        context: context,
+                        builder: (ctx) {
+                          int tempWeight = int.tryParse(_weight.text) ?? 70;
+
+                          return Container(
+                            height: 250,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    itemExtent: 40,
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: tempWeight - 30,
+                                    ),
+                                    onSelectedItemChanged: (index) {
+                                      tempWeight = 30 + index;
+                                    },
+                                    children: List.generate(
+                                      121, 
+                                      (index) => Center(
+                                        child: Text('${30 + index} kg'),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, tempWeight),
+                                      child: const Text("OK"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      if (selectedWeight != null) {
+                        setState(() => _weight.text = selectedWeight.toString());
+                      }
+                    },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+              
                   SizedBox(
                     height: 48,
                     child: FilledButton(
@@ -267,11 +355,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       const Text("Already have an account?"),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const SignInPage(),
-                            ),
-                          );
+                            Navigator.of(context).pop();  
                         },
                         child: const Text('Sign In'),
                       ),

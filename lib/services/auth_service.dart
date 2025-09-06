@@ -90,7 +90,6 @@ class AuthService {
           throw Exception('Failed to create profile row.');
         }
       } on PostgrestException catch (e) {
-        // 🔹 Step 2 improvement: handle duplicate email/username gracefully
         if (e.code == '23505') {
           throw Exception('Username or email already exists.');
         }

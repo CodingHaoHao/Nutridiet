@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'screen/auth/sign_in.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+    await dotenv.load(fileName: ".env");
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+  if (supabaseUrl == null || supabaseAnonKey == null) {
+    throw Exception('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
+  }
+
   await Supabase.initialize(
-    url: 'https://zifhcwddtatapnmmzebp.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZmhjd2RkdGF0YXBubW16ZWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOTA5NTgsImV4cCI6MjA3MTk2Njk1OH0.8K1KY4tVsdcipB12PiTULYi3H1iDtREjhQeifyI6qio',
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
+  print('SUPABASE_URL from .env: ${dotenv.env['SUPABASE_URL']}');
+
   runApp(const MyApp());
 }
 
