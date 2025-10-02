@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/auth_service.dart';
 import '../homepage.dart';
 import 'sign_up.dart';
+import '../bottom_bar.dart';
+
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -40,10 +42,10 @@ class _SignInPageState extends State<SignInPage> {
         password: _password.text,
       );
 
-      // success → go to home
+      // If successful login, navigate to homepage
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+         MaterialPageRoute(builder: (_) => const AppShell()),
       );
     } catch (e) {
       String message = 'Login failed';
