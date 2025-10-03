@@ -138,7 +138,7 @@ class _SignInPageState extends State<SignInPage> {
                       const Text("Don't have an account?"),
                       TextButton(
                         onPressed: () {
-                          Navigator.of(context).push(
+                          Navigator.of(context).pushReplacement(
                             MaterialPageRoute(builder: (_) => const SignUpPage()),
                           );
                         },
