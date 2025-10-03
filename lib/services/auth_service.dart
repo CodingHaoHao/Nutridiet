@@ -12,7 +12,6 @@ class AuthService {
     final isEmail = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(trimmed);
     String email;
 
-    // If input is email, use it directly. Otherwise lookup the email by username.
     if (isEmail) {
       email = trimmed;
     } else {
@@ -60,6 +59,12 @@ class AuthService {
       String? gender,
       double? height,
       double? weight,
+      double? goalWeight,
+      int? goalPeriodDays,
+      String? activityLevel,
+      int? bmr,
+      int? tdee,
+      int? calorieGoal, required int recommendedCalories,
     }) async {
       final emailTrim = email.trim();
       final usernameTrim = username.trim();
@@ -84,6 +89,12 @@ class AuthService {
           'gender': gender,
           'height': height,
           'weight': weight,
+          'goal_weight': goalWeight,
+          'goal_period_days': goalPeriodDays,
+          'activity_level': activityLevel,
+          'bmr': bmr,
+          'tdee': tdee,
+          'recommended_calories': recommendedCalories,
         }).select().maybeSingle();
 
         if (inserted == null) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'sign_in.dart';
 import '../../services/auth_service.dart';
+import '../../utils/calculation.dart';
 
 
 class SignUpPage extends StatefulWidget {
@@ -21,6 +22,10 @@ class _SignUpPageState extends State<SignUpPage> {
   String? _gender;
   final _height = TextEditingController();
   final _weight = TextEditingController();
+  final _goalWeight = TextEditingController();
+  final _goalPeriod = TextEditingController(); 
+  String? _activityLevel;
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _loading = false;
@@ -35,46 +40,70 @@ class _SignUpPageState extends State<SignUpPage> {
     _birthday.dispose();
     _height.dispose();
     _weight.dispose();
+    _goalWeight.dispose();
+    _goalPeriod.dispose();
     super.dispose();
   }
 
   void _showMessage(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
-  Future<void> _onSignUp() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_password.text != _confirmPassword.text) {
-      _showMessage('Passwords do not match');
-      return;
-    }
-    setState(() => _loading = true);
-
-    try {
-      await _auth.signUpAndCreateProfile(
-        username: _username.text,
-        email: _email.text,
-        password: _password.text,
-        birthday: _birthday.text.isEmpty ? null : _birthday.text,
-        gender: _gender,
-        height: double.tryParse(_height.text),
-        weight: double.tryParse(_weight.text),
-      );
-
-      if (!mounted) return;
-      _showMessage('Account created successfully! Sign in to start your journey now.');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const SignInPage()),
-      );
-    } catch (e) {
-      String msg = e.toString();
-      if (msg.contains('duplicate') || msg.toLowerCase().contains('unique')) {
-        msg = 'Username or email already exists.';
-      }
-      _showMessage(msg.replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+Future<void> _onSignUp() async {
+  if (!_formKey.currentState!.validate()) return;
+  if (_password.text != _confirmPassword.text) {
+    _showMessage('Passwords do not match');
+    return;
   }
+  setState(() => _loading = true);
+
+  try {
+    final birthdayDate = DateTime.parse(_birthday.text);
+    final age = CalculationUtils.calculateAge(birthdayDate);
+    final bmr = CalculationUtils.calculateBMR(
+      gender: _gender!,
+      weight: double.parse(_weight.text),
+      height: double.parse(_height.text),
+      age: age,
+    );
+    final tdee = CalculationUtils.calculateTDEE(bmr, _activityLevel!);
+    final recommendedCalories = CalculationUtils.calculateRecommendedCalories(
+      tdee: tdee,
+      currentWeight: double.parse(_weight.text),
+      goalWeight: double.parse(_goalWeight.text),
+      periodDays: int.parse(_goalPeriod.text),
+    );
+
+    await _auth.signUpAndCreateProfile(
+      username: _username.text,
+      email: _email.text,
+      password: _password.text,
+      birthday: _birthday.text.isEmpty ? null : _birthday.text,
+      gender: _gender,
+      height: double.tryParse(_height.text),
+      weight: double.tryParse(_weight.text),
+      goalWeight: double.tryParse(_goalWeight.text),
+      goalPeriodDays: int.tryParse(_goalPeriod.text),
+      activityLevel: _activityLevel,
+      bmr: bmr,
+      tdee: tdee,
+      recommendedCalories: recommendedCalories,
+    );
+
+    if (!mounted) return;
+    _showMessage('Account created successfully! Sign in to start your journey now.');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const SignInPage()),
+    );
+  } catch (e) {
+    String msg = e.toString();
+    if (msg.contains('duplicate') || msg.toLowerCase().contains('unique')) {
+      msg = 'Username or email already exists.';
+    }
+    _showMessage(msg.replaceFirst('Exception: ', ''));
+  } finally {
+    if (mounted) setState(() => _loading = false);
+  }
+}
 
   String? _validateUsername(String? v) {
     if (v == null || v.trim().isEmpty) return 'Username is required';
@@ -193,7 +222,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       );
                       if (date != null) {
                         _birthday.text =
-                            "${date.year}-${date.month}-${date.day}";
+                             "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
                       }
                     },
                     validator: _validateBirthday,
@@ -334,6 +363,148 @@ class _SignUpPageState extends State<SignUpPage> {
                     },
                   ),
                   const SizedBox(height: 16),
+
+                    TextFormField(
+                    controller: _goalWeight,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Goal Weight (kg)',
+                      prefixIcon: Icon(Icons.flag),
+                      border: OutlineInputBorder(),
+                    ),
+                    onTap: () async {
+                      final selectedGoalWeight = await showModalBottomSheet<int>(
+                        context: context,
+                        builder: (ctx) {
+                          int tempGoalWeight = int.tryParse(_goalWeight.text) ?? 70;
+
+                          return Container(
+                            height: 250,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    itemExtent: 40,
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: (tempGoalWeight - 30).clamp(0, 120),
+                                    ),
+                                    onSelectedItemChanged: (index) {
+                                      tempGoalWeight = 30 + index;
+                                    },
+                                    children: List.generate(
+                                      121,
+                                      (index) => Center(child: Text('${30 + index} kg')),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, tempGoalWeight),
+                                      child: const Text("OK"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      if (selectedGoalWeight != null) {
+                        setState(() => _goalWeight.text = selectedGoalWeight.toString());
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _goalPeriod,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Achieved Period (days)',
+                      prefixIcon: Icon(Icons.calendar_today),
+                      border: OutlineInputBorder(),
+                    ),
+                    onTap: () async {
+                      final selectedPeriod = await showModalBottomSheet<int>(
+                        context: context,
+                        builder: (ctx) {
+                          // default to 30 days if no input
+                          int tempPeriod = int.tryParse(_goalPeriod.text) ?? 30;
+
+                          // ensure it's within 30–120
+                          if (tempPeriod < 30) tempPeriod = 30;
+                          if (tempPeriod > 120) tempPeriod = 120;
+
+                          // index = (value - 30) / 10
+                          final initialIndex = ((tempPeriod - 30) ~/ 10).clamp(0, 9);
+
+                          return Container(
+                            height: 250,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    itemExtent: 40,
+                                    scrollController: FixedExtentScrollController(
+                                      initialItem: initialIndex,
+                                    ),
+                                    onSelectedItemChanged: (index) {
+                                      tempPeriod = 30 + (index * 10);
+                                    },
+                                    children: List.generate(
+                                      10, // 30,40,...,120 = 10 values
+                                      (index) => Center(child: Text('${30 + (index * 10)} days')),
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text("Cancel"),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () => Navigator.pop(ctx, tempPeriod),
+                                      child: const Text("OK"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                      if (selectedPeriod != null) {
+                        setState(() => _goalPeriod.text = selectedPeriod.toString());
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Activity level',
+                      prefixIcon: Icon(Icons.fitness_center),
+                      border: OutlineInputBorder(),
+                    ),
+                    value: _activityLevel,
+                    items: const [
+                      DropdownMenuItem(value: 'Sedentary', child: Text('Sedentary (little or no exercise)')),
+                      DropdownMenuItem(value: 'Lightly Active', child: Text('Lightly Active (1-3 days/wk)')),
+                      DropdownMenuItem(value: 'Moderately Active', child: Text('Moderate (3-5 days/wk)')),
+                      DropdownMenuItem(value: 'Very Active', child: Text('Very Active (6-7 days/wk)')),
+                    ],
+                    onChanged: (value) => setState(() => _activityLevel = value),
+                    validator: (value) => value == null ? 'Please select activity level' : null,
+                  ),
+                  const SizedBox(height: 16),
               
                   SizedBox(
                     height: 48,
@@ -355,7 +526,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       const Text("Already have an account?"),
                       TextButton(
                         onPressed: () {
-                            Navigator.of(context).pop();  
+                             Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const SignInPage()),
+                            );
                         },
                         child: const Text('Sign In'),
                       ),
