@@ -1,3 +1,4 @@
+-- Account table --
 create table public.account (
   id uuid not null default gen_random_uuid (),
   user_id uuid null,
@@ -21,3 +22,14 @@ ALTER TABLE public.account
 ADD COLUMN IF NOT EXISTS bmr integer null,
 ADD COLUMN IF NOT EXISTS tdee integer null,
 ADD COLUMN IF NOT EXISTS recommended_calories integer null;
+
+alter table public.account
+add constraint account_user_id_unique unique (user_id);
+
+-- Calories log table -- 
+create table public.calories_log (
+  id uuid primary key default gen_random_uuid(), 
+  user_id uuid not null references public.account(user_id) on delete cascade,
+  calories_taken numeric not null default 0,
+  log_date date not null
+);

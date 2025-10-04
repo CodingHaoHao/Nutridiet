@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // extract profile values
+    // extract user information
     final username = profile!['username'] ?? '';
     final email = profile!['email'] ?? '';
     final gender = profile!['gender'] ?? 'Male';
@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
     final birthdayStr = profile!['birthday'] as String? ?? '2000-01-01';
     final birthday = DateTime.tryParse(birthdayStr) ?? DateTime(2000, 1, 1);
 
-    // calculate values
+    // calculate recommended calories
     final age = CalculationUtils.calculateAge(birthday);
     final bmr = CalculationUtils.calculateBMR(
       gender: gender,
