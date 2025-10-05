@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../homepage.dart';
 import 'sign_up.dart';
 import '../bottom_bar.dart';
+import 'forgot_password_page.dart';
 
 
 class SignInPage extends StatefulWidget {
@@ -113,12 +114,15 @@ class _SignInPageState extends State<SignInPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
-                        onPressed: () {
-                          _showMessage('Forgot password: implement reset flow later');
-                        },
-                        child: const Text('Forgot password?'),
-                      ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                        );
+                      },
+                      child: const Text("Forgot Password?"),
+                    ),
                     ],
                   ),
                   const SizedBox(height: 8),
