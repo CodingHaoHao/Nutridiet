@@ -51,7 +51,7 @@ class KnowledgeInventoryPage extends StatelessWidget {
                   children: const [
                     Center(
                       child: Text(
-                        'Nutrition Knowledge Inventory',
+                        'NutriDiet Knowledge Inventory',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 22,
@@ -62,7 +62,7 @@ class KnowledgeInventoryPage extends StatelessWidget {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'This page will provides the nutrition knowledge and calculations to count the recommended calories which helps you to reach your goal weight in estimate period.',
+                      'This page will provides the nutrition knowledges and calculations to count the recommended calories which helps you to reach your goal weight in estimate period.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
@@ -72,7 +72,6 @@ class KnowledgeInventoryPage extends StatelessWidget {
                     ),
                     SizedBox(height: 12),
 
-                    // BMR
                     Text(
                       '1. Basal Metabolic Rate (BMR)',
                       style: TextStyle(
@@ -90,7 +89,6 @@ class KnowledgeInventoryPage extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
 
-                    // ACTIVITY LEVEL
                     Text(
                       '2. Activity Level',
                       style: TextStyle(
@@ -107,7 +105,6 @@ class KnowledgeInventoryPage extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
 
-                    // TDEE 
                     Text(
                       '3. Total Daily Energy Expenditure (TDEE)',
                       style: TextStyle(
@@ -123,7 +120,6 @@ class KnowledgeInventoryPage extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
 
-                    // ─── GOAL CALORIES ────────────────────────────────────
                     Text(
                       '4. Goal Calories Calculation',
                       style: TextStyle(
@@ -139,7 +135,6 @@ class KnowledgeInventoryPage extends StatelessWidget {
                       textAlign: TextAlign.justify,
                     ),
 
-                    // ─── NOTES ───────────────────────────────────────────
                     Text(
                       '5. Important Notes',
                       style: TextStyle(

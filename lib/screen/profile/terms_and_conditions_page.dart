@@ -24,7 +24,7 @@ class TermsAndConditionsPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context); // ✅ back to ProfilePage
+            Navigator.pop(context); 
           },
         ),
       ),
