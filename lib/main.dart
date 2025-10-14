@@ -18,8 +18,6 @@ void main() async {
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
-  print('SUPABASE_URL from .env: ${dotenv.env['SUPABASE_URL']}');
-
   runApp(const MyApp());
 }
 

@@ -54,7 +54,6 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // extract user information
     final username = profile!['username'] ?? '';
     final email = profile!['email'] ?? '';
     final gender = profile!['gender'] ?? 'Male';
@@ -66,7 +65,6 @@ class _HomePageState extends State<HomePage> {
     final birthdayStr = profile!['birthday'] as String? ?? '2000-01-01';
     final birthday = DateTime.tryParse(birthdayStr) ?? DateTime(2000, 1, 1);
 
-    // calculate recommended calories
     final age = CalculationUtils.calculateAge(birthday);
     final bmr = CalculationUtils.calculateBMR(
       gender: gender,
@@ -111,7 +109,6 @@ class _HomePageState extends State<HomePage> {
             Text("Age: $age years"),
             const Divider(height: 30, thickness: 1),
 
-            // Card-style metrics
             Card(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),

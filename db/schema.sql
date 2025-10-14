@@ -33,3 +33,15 @@ create table public.calories_log (
   calories_taken numeric not null default 0,
   log_date date not null
 );
+
+-- Password reset table --
+create table public.password_reset (
+  id uuid not null default gen_random_uuid (),
+  email text not null,
+  otp text not null,
+  used boolean null default false,
+  expires_at timestamp with time zone not null,
+  created_at timestamp with time zone null default now(),
+  constraint password_reset_pkey primary key (id)
+) TABLESPACE pg_default;
+

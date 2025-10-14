@@ -48,13 +48,13 @@ class _SignUpPageState extends State<SignUpPage> {
   void _showMessage(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
-Future<void> _onSignUp() async {
-  if (!_formKey.currentState!.validate()) return;
-  if (_password.text != _confirmPassword.text) {
-    _showMessage('Passwords do not match');
-    return;
-  }
-  setState(() => _loading = true);
+  Future<void> _onSignUp() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_password.text != _confirmPassword.text) {
+      _showMessage('Passwords do not match');
+      return;
+    }
+    setState(() => _loading = true);
 
   try {
     final birthdayDate = DateTime.parse(_birthday.text);
@@ -343,7 +343,7 @@ Future<void> _onSignUp() async {
                                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                   children: [
                                     ElevatedButton(
-                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      onPressed: () => Navigator.pop(ctx),
                                       child: const Text("Cancel"),
                                     ),
                                     ElevatedButton(
@@ -401,7 +401,7 @@ Future<void> _onSignUp() async {
                                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                   children: [
                                     ElevatedButton(
-                                      onPressed: () => Navigator.pop(ctx), // cancel
+                                      onPressed: () => Navigator.pop(ctx), 
                                       child: const Text("Cancel"),
                                     ),
                                     ElevatedButton(
@@ -434,14 +434,10 @@ Future<void> _onSignUp() async {
                       final selectedPeriod = await showModalBottomSheet<int>(
                         context: context,
                         builder: (ctx) {
-                          // default to 30 days if no input
                           int tempPeriod = int.tryParse(_goalPeriod.text) ?? 30;
-
-                          // ensure it's within 30–120
                           if (tempPeriod < 30) tempPeriod = 30;
                           if (tempPeriod > 120) tempPeriod = 120;
 
-                          // index = (value - 30) / 10
                           final initialIndex = ((tempPeriod - 30) ~/ 10).clamp(0, 9);
 
                           return Container(
@@ -458,7 +454,7 @@ Future<void> _onSignUp() async {
                                       tempPeriod = 30 + (index * 10);
                                     },
                                     children: List.generate(
-                                      10, // 30,40,...,120 = 10 values
+                                      10,
                                       (index) => Center(child: Text('${30 + (index * 10)} days')),
                                     ),
                                   ),

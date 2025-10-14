@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'reset_password_page.dart';
 
 class VerifyOtpPage extends StatefulWidget {
@@ -11,9 +12,13 @@ class VerifyOtpPage extends StatefulWidget {
 
 class _VerifyOtpPageState extends State<VerifyOtpPage> {
   final _otpController = TextEditingController();
+  bool _loading = false;
 
-  void _verifyOtp() {
+  final _client = Supabase.instance.client;
+
+  Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
+
     if (otp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter the OTP.")),
@@ -21,13 +26,48 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
       return;
     }
 
-    // Navigate to Reset Password page
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ResetPasswordPage(email: widget.email, otp: otp),
-      ),
-    );
+    setState(() => _loading = true);
+
+    try {
+      final response = await _client
+          .from('password_reset')
+          .select()
+          .eq('email', widget.email)
+          .eq('otp', otp)
+          .eq('used', false)
+          .maybeSingle();
+
+      if (response == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Invalid OTP. Please try again.")),
+        );
+        return;
+      }
+
+      final expiresAt = DateTime.parse(response['expires_at']);
+      if (DateTime.now().isAfter(expiresAt)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("OTP expired. Please request a new one.")),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordPage(
+            email: widget.email,
+            otp: otp,
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error verifying OTP: $e")),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -60,12 +100,14 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _verifyOtp,
+              onPressed: _loading ? null : _verifyOtp,
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorPrimary,
                 minimumSize: const Size(double.infinity, 48),
               ),
-              child: const Text("Verify", style: TextStyle(color: Colors.white)),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Verify", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

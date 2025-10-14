@@ -16,6 +16,7 @@ class ResetPasswordPage extends StatefulWidget {
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _newPasswordController = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
 
   Future<void> _resetPassword() async {
     final newPassword = _newPasswordController.text.trim();
@@ -34,7 +35,6 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         Uri.parse('https://zifhcwddtatapnmmzebp.supabase.co/functions/v1/reset-password'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppZmhjd2RkdGF0YXBubW16ZWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOTA5NTgsImV4cCI6MjA3MTk2Njk1OH0.8K1KY4tVsdcipB12PiTULYi3H1iDtREjhQeifyI6qio',
         },
         body: jsonEncode({
           'email': widget.email,
@@ -89,10 +89,16 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             const SizedBox(height: 20),
             TextField(
               controller: _newPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
                 labelText: "New Password",
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -104,7 +110,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               ),
               child: _loading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Reset Password", style: TextStyle(color: Colors.white)),
+                  : const Text("Confirm", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
