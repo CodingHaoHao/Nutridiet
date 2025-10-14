@@ -91,7 +91,7 @@ class _AssistantPageState extends State<AssistantPage> {
     final userInput = _controller.text.trim();
     if (userInput.isEmpty && _selectedImage == null) return;
 
-    final now = DateFormat('MM dd, yyyy • hh:mm a').format(DateTime.now()); // month day, year • hour:minute AM/PM
+    final now = DateFormat('MMM d, yyyy • hh:mm a').format(DateTime.now()); // month day, year • hour:minute AM/PM
 
     File? imageToSend = _selectedImage;
 
