@@ -75,6 +75,12 @@ serve(async (req) => {
           Protein: 
           Fat: 
 
+          Then give the total nutrition information:
+          Total Calories:
+          Total Carbohydrates:
+          Total Protein:
+          Total Fat:
+          
           Summary: 
           (Provide a brief summary of the food, how is the food for user health. 
           Is it a suitable meal? Is it good for health or any recommendations for improvement.)

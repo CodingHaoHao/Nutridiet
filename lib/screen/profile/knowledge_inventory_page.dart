@@ -5,28 +5,22 @@ class KnowledgeInventoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorPrimary = const Color(0xFF8BD3A3);
-    final colorBackground = const Color(0xFFF9FBF9);
+    const Color pageBackground = Color(0xFFF9FBFF);
 
     return Scaffold(
-      backgroundColor: colorBackground,
+      backgroundColor: pageBackground,
       appBar: AppBar(
         title: const Text(
           'Knowledge Inventory',
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black87,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
-        backgroundColor: colorPrimary,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: SafeArea(
         child: Padding(

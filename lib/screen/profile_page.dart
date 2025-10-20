@@ -4,6 +4,9 @@ import '../services/auth_service.dart';
 import 'auth/sign_in.dart';
 import '../screen/profile/terms_and_conditions_page.dart';
 import '../screen/profile/knowledge_inventory_page.dart';
+import '../screen/profile/edit_profile_page.dart';
+import '../screen/profile/settings_page.dart';
+import '../screen/profile/upgrade_plans_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -63,7 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading profile: $e');
+      print('Error loading profile: $e');
       if (mounted) {
         setState(() => loading = false);
       }
@@ -327,11 +330,26 @@ class _ProfilePageState extends State<ProfilePage> {
                         _buildMenuItem(context,
                             icon: Icons.person_outline,
                             text: "Edit Profile",
-                            onTap: () {}),
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                              );
+                              _loadProfile();
+                            },
+                          ),
+
                         _buildMenuItem(context,
                             icon: Icons.star_border,
                             text: "Upgrade Plans",
-                            onTap: () {}),
+                            onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const UpgradePlansPage()),
+                            );
+                          },
+                        ),
                         _buildMenuItem(
                           context,
                           icon: Icons.book_outlined,
@@ -359,7 +377,14 @@ class _ProfilePageState extends State<ProfilePage> {
                         _buildMenuItem(context,
                             icon: Icons.settings_outlined,
                             text: "Settings",
-                            onTap: () {}),
+                             onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const SettingsPage()),
+                            );
+                          },
+                        ),
                         _buildMenuItem(context,
                             icon: Icons.logout,
                             text: "Log Out",
