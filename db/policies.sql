@@ -102,3 +102,26 @@ using (
 ) with check (
   (auth.role() = 'service_role'::text)
 );
+
+-- Policies for assistant_sessions table --
+alter table assistant_session enable row level security;
+
+create policy "Users can view their own sessions"
+on assistant_session
+for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own sessions"
+on assistant_session
+for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own sessions"
+on assistant_session
+for update
+using (auth.uid() = user_id);
+
+create policy "Users can delete their own sessions"
+on assistant_session
+for delete
+using (auth.uid() = user_id);

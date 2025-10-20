@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/assistant_session_service.dart';
 
 class AssistantPage extends StatefulWidget {
   const AssistantPage({super.key});
@@ -13,12 +15,41 @@ class AssistantPage extends StatefulWidget {
   State<AssistantPage> createState() => _AssistantPageState();
 }
 
-class _AssistantPageState extends State<AssistantPage> {
-  final TextEditingController _controller = TextEditingController();
-  final List<Map<String, dynamic>> _messages = [];
-  final ImagePicker _picker = ImagePicker();
-  bool _isLoading = false;
-  File? _selectedImage;
+  class _AssistantPageState extends State<AssistantPage> {
+    final TextEditingController _controller = TextEditingController();
+    final List<Map<String, dynamic>> _messages = [];
+    final ImagePicker _picker = ImagePicker();
+    final _sessionService = AssistantSessionService();
+    bool _isLoading = false;
+    File? _selectedImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeSession();
+  }
+
+  Future<void> _initializeSession() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      print('No Supabase user session found.');
+      return;
+    }
+
+    await _sessionService.getOrCreateSession();
+
+    final history = await _sessionService.loadMessages();
+
+    if (mounted) {
+      setState(() {
+        _messages
+          ..clear()
+          ..addAll(history);
+      });
+    }
+  }
 
   void _showImageSourceOptions() {
     showModalBottomSheet(
@@ -126,6 +157,14 @@ class _AssistantPageState extends State<AssistantPage> {
         body: jsonEncode({
           'message': userInput,
           'imageBase64': base64Image,
+          'history': _messages.map((msg) {
+            return {
+              'role': msg['sender'] == 'user' ? 'user' : 'assistant',
+              'content': [
+                {'type': 'text', 'text': msg['text'] ?? ''},
+              ],
+            };
+          }).toList(),
         }),
       );
 
@@ -135,6 +174,7 @@ class _AssistantPageState extends State<AssistantPage> {
         setState(() {
           _messages.add({'sender': 'ai', 'text': reply, 'time': now});
         });
+        await _sessionService.saveMessages(_messages);
       } else {
         setState(() {
           _messages.add({
@@ -156,6 +196,58 @@ class _AssistantPageState extends State<AssistantPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _clearChat() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Chat History'),
+        content: const Text('Are you sure you want to delete all chat history?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // Delete the user's session
+      await Supabase.instance.client
+      .from('assistant_session')
+      .update({
+        'messages': [],
+        'updated_at': DateTime.now().toIso8601String(),
+      })
+      .eq('user_id', user.id);
+
+      setState(() {
+        _messages.clear();
+      });
+
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chat history cleared successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to clear chat: $e')),
+      );
     }
   }
 
@@ -225,18 +317,34 @@ class _AssistantPageState extends State<AssistantPage> {
     return Scaffold(
       backgroundColor: pageBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'AI Health Assistant',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+      title: const Text(
+        'AI Health Assistant',
+        style: TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w600,
+          fontSize: 18,
         ),
       ),
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: Colors.black87),
+          onSelected: (value) async {
+            if (value == 'clear') {
+              await _clearChat();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'clear',
+              child: Text('Clear Chat'),
+            ),
+          ],
+        ),
+      ],
+    ),
       body: SafeArea(
         child: Column(
           children: [

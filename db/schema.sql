@@ -45,3 +45,10 @@ create table public.password_reset (
   constraint password_reset_pkey primary key (id)
 ) TABLESPACE pg_default;
 
+-- Assistant session table --
+create table public.assistant_session (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  messages jsonb not null default '[]',
+  updated_at timestamp with time zone default now()
+);
