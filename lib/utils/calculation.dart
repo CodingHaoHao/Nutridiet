@@ -42,7 +42,7 @@ class CalculationUtils {
   // Calculate TDEE
   static int calculateTDEE(int bmr, String activityLevel) {
     final multiplier = getActivityMultiplier(activityLevel);
-    return (bmr * multiplier).floor();
+    return (bmr * multiplier).ceil();
   }
 
   // Calculate recommended daily calories
@@ -58,12 +58,12 @@ class CalculationUtils {
 
     // 1 kg = 7700 kcal
     const kcalPerKg = 7700;
-    final totalKcal = (weightDiff.abs() * kcalPerKg).floor();
-    final dailyKcalChange = (totalKcal / periodDays).floor();
+    final totalKcal = (weightDiff.abs() * kcalPerKg).ceil();
+    final dailyKcalChange = (totalKcal / periodDays).ceil();
 
     if (weightDiff < 0) {
       // user wants to lose weight
-      return (tdee - dailyKcalChange).clamp(1200, tdee); // min safe intake 1200
+      return (tdee - dailyKcalChange).clamp(1200, tdee); // set the minimnm calories to 1200
     } else {
       // weightDiff > 0 = goal weight > current weight = user wants to gain weight
       return (tdee + dailyKcalChange);

@@ -71,14 +71,14 @@ class _HomePageState extends State<HomePage> {
       weight: weight,
       height: height,
       age: age,
-    ).floor();
-    final tdee = CalculationUtils.calculateTDEE(bmr, activity).floor();
+    ).ceil();
+    final tdee = CalculationUtils.calculateTDEE(bmr, activity).ceil();
     final recommended = CalculationUtils.calculateRecommendedCalories(
       currentWeight: weight,
       goalWeight: goalWeight,
       periodDays: period,
       tdee: tdee,
-    ).floor();
+    ).ceil();
 
     return Scaffold(
       appBar: AppBar(
