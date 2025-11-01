@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/auth_service.dart';
-import '../homepage.dart';
+// import '../homepage.dart';
 import 'sign_up.dart';
 import '../bottom_bar.dart';
 import 'forgot_password_page.dart';

@@ -271,7 +271,7 @@ class UpgradePlansPage extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text("Further development in progress..."),
-                  backgroundColor: primaryColor,
+                  backgroundColor: Colors.black87,
                 ),
               );
             },

@@ -19,7 +19,7 @@ serve(async (req) => {
       "meal", "food", "diet", "health", "bmr", "tdee", "weight", "lose weight",
       "gain weight", "nutrient", "sugar", "cholesterol", "fiber", "macronutrient",
       "micronutrient", "water", "balanced diet", "metabolism", "vegetarian",
-      "allergy", "recipe", "intake", "dietary", "nutritionist", "dietitian"
+      "allergy", "recipe", "intake", "dietary", "nutritionist", "dietitian",
     ];
 
     const isNutritionRelated = nutritionKeywords.some(keyword =>
