@@ -125,3 +125,27 @@ create policy "Users can delete their own sessions"
 on assistant_session
 for delete
 using (auth.uid() = user_id);
+
+ALTER TABLE public.calories_log ENABLE ROW LEVEL SECURITY;
+
+-- Policies for calories_log table --
+CREATE POLICY "Users can insert their own logs"
+ON public.calories_log
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own logs"
+ON public.calories_log
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own logs"
+ON public.calories_log
+FOR UPDATE
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own logs"
+ON public.calories_log
+FOR DELETE
+USING (auth.uid() = user_id);
+

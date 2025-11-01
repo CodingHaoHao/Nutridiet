@@ -27,11 +27,18 @@ alter table public.account
 add constraint account_user_id_unique unique (user_id);
 
 -- Calories log table -- 
-create table public.calories_log (
-  id uuid primary key default gen_random_uuid(), 
-  user_id uuid not null references public.account(user_id) on delete cascade,
-  calories_taken numeric not null default 0,
-  log_date date not null
+CREATE TABLE public.calories_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.account(user_id) ON DELETE CASCADE,
+  meal_type text,
+  name text,
+  calories numeric,
+  carbs numeric,
+  protein numeric,
+  fat numeric,
+  image_url text,
+  log_date date NOT NULL,
+  created_at timestamptz DEFAULT now()
 );
 
 -- Password reset table --
