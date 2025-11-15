@@ -373,7 +373,6 @@ class _LoggingPageState extends State<LoggingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not analyze image — saved image only.')),
       );
- 
       return;
     }
 
@@ -546,10 +545,9 @@ class _LoggingPageState extends State<LoggingPage> {
           InkWell(
             onTap: () {
               final nextWeek = _weekStart.add(const Duration(days: 7));
-              final nextWeekEnd = nextWeek.add(const Duration(days: 6));
-              final endOfMonth = DateTime(_today.year, _today.month + 1, 0);
-
-              if (!nextWeekEnd.isAfter(_today) && nextWeek.isBefore(endOfMonth)) {
+              final thisWeekStart = _today.subtract(Duration(days: _today.weekday % 7));
+              final thisWeekEnd = thisWeekStart.add(const Duration(days: 6));
+              if (!nextWeek.isAfter(thisWeekEnd)) {
                 setState(() {
                   _weekStart = nextWeek;
                   _selectedDate = _weekStart;
