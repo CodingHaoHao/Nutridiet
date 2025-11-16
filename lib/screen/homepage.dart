@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'auth/sign_in.dart';
-import '../services/auth_service.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../utils/calculation.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,141 +10,333 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final _client = Supabase.instance.client;
-  Map<String, dynamic>? profile;
-  bool loading = true;
+  final supabase = Supabase.instance.client;
+  String username = "";
+  String profileImage = "";
+  double breakfastCal = 0;
+  double lunchCal = 0;
+  double dinnerCal = 0;
+  double totalCal = 0;
+  double totalCarb = 0;
+  double totalProtein = 0;
+  double totalFat = 0;
+  double height = 0;
+  double weight = 0;
+  double goalWeight = 0;
+  String goalPeriod = "";
+  double tdee = 0;
+  double recommended = 2000;
 
   @override
   void initState() {
     super.initState();
+    _loadTodayLogs();
     _loadProfile();
   }
 
-  Future<void> _loadProfile() async {
-    final user = _client.auth.currentUser;
+  Future<void> _loadTodayLogs() async {
+    final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    final res = await _client
-        .from('account')
-        .select()
-        .eq('user_id', user.id)
-        .maybeSingle();
+    final today = DateFormat("yyyy-MM-dd").format(DateTime.now());
 
-    if (mounted) {
-      setState(() {
-        profile = res;
-        loading = false;
-      });
+    try {
+      final data = await supabase
+          .from("calories_log")
+          .select()
+          .eq("user_id", user.id)
+          .eq("log_date", today);
+
+      breakfastCal = 0;
+      lunchCal = 0;
+      dinnerCal = 0;
+      totalCal = 0;
+      totalCarb = 0;
+      totalProtein = 0;
+      totalFat = 0;
+
+      for (var row in data) {
+        final meal = row["meal_type"] ?? "";
+        final cal = (row["calories"] ?? 0).toDouble();
+
+        if (meal == "breakfast") breakfastCal += cal;
+        if (meal == "lunch") lunchCal += cal;
+        if (meal == "dinner") dinnerCal += cal;
+
+        totalCal += cal;
+        totalCarb += (row["carbs"] ?? 0).toDouble();
+        totalProtein += (row["protein"] ?? 0).toDouble();
+        totalFat += (row["fat"] ?? 0).toDouble();
+      }
+      setState(() {});
+    } catch (e) {
+      debugPrint("Error fetching today's logs: $e");
     }
+  }
+
+  Future<void> _loadProfile() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final res = await supabase
+          .from("account")
+          .select()
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+      if (res != null) {
+        username = res["username"] ?? "";
+        profileImage = res["profile_image"] ?? "";
+        height = (res["height"] ?? 0).toDouble();
+        weight = (res["weight"] ?? 0).toDouble();
+        goalWeight = (res["goal_weight"] ?? 0).toDouble();
+        goalPeriod = "${res["goal_period_days"] ?? 0} days";
+        tdee = (res["tdee"] ?? 0).toDouble();
+        recommended = (res["recommended_calories"] ?? 2000).toDouble();
+      }
+      setState(() {});
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    }
+  }
+
+  Widget _infoTile(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 6),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _mealBox(String title, double kcal, Color color) {
+    return Container(
+      width: 110,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(title,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: color)),
+          const SizedBox(height: 8),
+          Text("${kcal.toInt()} kcal",
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: color)),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (profile == null) {
-      return const Scaffold(
-        body: Center(child: Text('No profile data found')),
-      );
-    }
-
-    final username = profile!['username'] ?? '';
-    final email = profile!['email'] ?? '';
-    final gender = profile!['gender'] ?? 'Male';
-    final height = (profile!['height'] as num?)?.toDouble() ?? 170;
-    final weight = (profile!['weight'] as num?)?.toDouble() ?? 70;
-    final goalWeight = (profile!['goal_weight'] as num?)?.toDouble() ?? weight;
-    final period = (profile!['goal_period_days'] as int?) ?? 60;
-    final activity = profile!['activity_level'] ?? 'Sedentary';
-    final birthdayStr = profile!['birthday'] as String? ?? '2000-01-01';
-    final birthday = DateTime.tryParse(birthdayStr) ?? DateTime(2000, 1, 1);
-
-    final age = CalculationUtils.calculateAge(birthday);
-    final bmr = CalculationUtils.calculateBMR(
-      gender: gender,
-      weight: weight,
-      height: height,
-      age: age,
-    ).ceil();
-    final tdee = CalculationUtils.calculateTDEE(bmr, activity).ceil();
-    final recommended = CalculationUtils.calculateRecommendedCalories(
-      currentWeight: weight,
-      goalWeight: goalWeight,
-      periodDays: period,
-      tdee: tdee,
-    ).ceil();
+    final progress = (totalCal / recommended).clamp(0.0, 1.0);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FBFF),
       appBar: AppBar(
-        backgroundColor: Colors.lightBlueAccent,
-        title: const Text('NutriDiet'),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              await AuthService().signOut();
-              if (!context.mounted) return;
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const SignInPage()),
-              );
-            },
-            icon: const Icon(Icons.logout),
-          ),
-        ],
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text("Home",
+            style: TextStyle(color: Colors.black87)),
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ListView(
-          children: [
-            Text("👋 Welcome, $username!",
-                style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            Text("Email: $email"),
-            Text("Gender: $gender"),
-            Text("Age: $age years"),
-            const Divider(height: 30, thickness: 1),
 
-            Card(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Welcome, $username !",
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Complete your nutrition goal today",
+                        style: TextStyle(color: Colors.black54, fontSize: 14),
+                      ),
+                    ],
+                  ),
+
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.black38, width: 1.4),
+                      image: DecorationImage(
+                        image: profileImage.isNotEmpty
+                            ? AssetImage(profileImage)
+                            : const AssetImage("assets/profile/male_profile1.jpg"),
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  double itemWidth = (constraints.maxWidth - 24) / 2; 
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(width: itemWidth, child: _infoTile("Height", "$height cm")),
+                      SizedBox(width: itemWidth, child: _infoTile("Weight", "$weight kg")),
+                      SizedBox(width: itemWidth, child: _infoTile("Goal Weight", "$goalWeight kg")),
+                      SizedBox(width: itemWidth, child: _infoTile("Goal Period", goalPeriod)),
+                      SizedBox(width: itemWidth, child: _infoTile("TDEE", tdee.toStringAsFixed(0))),
+                      SizedBox(width: itemWidth, child: _infoTile("Recommended", "${recommended.toInt()} kcal")),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Today's Meals",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () async {
+                      await _loadTodayLogs();
+                      await _loadProfile();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              Row(
+                children: [
+                  Expanded(child: _mealBox("Breakfast", breakfastCal, Colors.orange)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _mealBox("Lunch", lunchCal, Colors.blue)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _mealBox("Dinner", dinnerCal, Colors.purple)),
+                ],
+              ),
+              const SizedBox(height: 15),
+
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))
+                  ],
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("📏 Height: ${height.toStringAsFixed(1)} cm"),
-                    Text("⚖️ Weight: ${weight.toStringAsFixed(1)} kg"),
-                    Text("🎯 Goal Weight: ${goalWeight.toStringAsFixed(1)} kg"),
-                    Text("📅 Goal Period: $period days"),
-                    Text("🏃 Activity Level: $activity"),
+                    Text("${totalCal.toInt()} / ${recommended.toInt()} kcal",
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+
+                    const SizedBox(height: 10),
+
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 12,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor:
+                            AlwaysStoppedAnimation(Colors.purpleAccent),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text("Carbs",
+                                style:
+                                    TextStyle(color: Colors.black54)),
+                            Text("${totalCarb.toInt()} g",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Text("Protein",
+                                style:
+                                    TextStyle(color: Colors.black54)),
+                            Text("${totalProtein.toInt()} g",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            const Text("Fat",
+                                style:
+                                    TextStyle(color: Colors.black54)),
+                            Text("${totalFat.toInt()} g",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    )
                   ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-            Card(
-              color: Colors.lightBlue.shade50,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("🔥 BMR: $bmr kcal"),
-                    Text("⚡ TDEE: $tdee kcal"),
-                    Text("🥗 Recommended Daily Calories: $recommended kcal"),
-                  ],
-                ),
-              ),
-            ),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

@@ -33,6 +33,7 @@ dependencies:
   supabase_flutter: ^2.5.0
   numberpicker: ^2.1.2
   image_picker: ^1.1.2
+  fl_chart: ^0.66.0
 
 
   # The following adds the Cupertino Icons font to your application.
