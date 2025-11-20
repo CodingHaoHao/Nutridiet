@@ -67,50 +67,83 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     }
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    final colorPrimary = const Color(0xFF8BD3A3);
+    const Color primaryColor = Color(0xFF6C63FF);
+    const Color backgroundColor = Color(0xFFF9FBFF);
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text("Reset Password"),
-        backgroundColor: colorPrimary,
+        backgroundColor: Colors.white,
+        elevation: 1,
         centerTitle: true,
+        title: const Text(
+          "Reset Password",
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               "Enter your new password below.",
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: Colors.black54),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: _newPasswordController,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 labelText: "New Password",
-                border: const OutlineInputBorder(),
+                labelStyle: const TextStyle(color: Colors.black87),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
                 suffixIcon: IconButton(
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                   icon: Icon(
                     _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                    color: Colors.grey,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _resetPassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorPrimary,
-                minimumSize: const Size(double.infinity, 48),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _resetPassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 3,
+                ),
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Confirm",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Confirm", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),

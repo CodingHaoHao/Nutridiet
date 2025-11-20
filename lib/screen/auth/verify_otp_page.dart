@@ -72,42 +72,73 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorPrimary = const Color(0xFF8BD3A3);
+    const Color primaryColor = Color(0xFF6C63FF);
+    const Color backgroundColor = Color(0xFFF9FBFF);
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text("Verify OTP"),
-        backgroundColor: colorPrimary,
+        backgroundColor: Colors.white,
+        elevation: 1,
         centerTitle: true,
+        title: const Text(
+          "Verify OTP",
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "Enter the 6-digit OTP sent to\n${widget.email}",
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, height: 1.5),
+              style: const TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "OTP Code",
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(color: Colors.black87),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _verifyOtp,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorPrimary,
-                minimumSize: const Size(double.infinity, 48),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _verifyOtp,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 3,
+                ),
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Verify",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Verify", style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
