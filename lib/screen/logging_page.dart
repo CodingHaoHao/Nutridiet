@@ -390,6 +390,84 @@ class _LoggingPageState extends State<LoggingPage> {
     
   }
 
+  void _showFoodDetail(Map<String, dynamic> it) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    builder: (ctx) {
+      return Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+
+            if (it['imageUrl'] != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  it['imageUrl'],
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              it['name'] ?? 'Food',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 16),
+
+            Text('Calories: ${it['calories']} kcal', style: const TextStyle(fontSize: 16)),
+            Text('Carbs: ${it['carbs']} g', style: const TextStyle(fontSize: 16)),
+            Text('Protein: ${it['protein']} g', style: const TextStyle(fontSize: 16)),
+            Text('Fat: ${it['fat']} g', style: const TextStyle(fontSize: 16)),
+
+            const SizedBox(height: 15),
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _removeEntry(it);
+                },
+                child: const Text(
+                  "Delete Entry",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _addEntryToMeal(String mealType, Map<String, dynamic> entry, {bool persist = false}) async {
     setState(() {
       if (mealType == 'breakfast') {
@@ -409,7 +487,7 @@ class _LoggingPageState extends State<LoggingPage> {
 
       final logDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-      await supabase.from('calories_log').insert({
+      final inserted = await supabase.from('calories_log').insert({
         'user_id': user.id,
         'log_date': logDate,
         'meal_type': mealType,
@@ -420,9 +498,13 @@ class _LoggingPageState extends State<LoggingPage> {
         'fat': entry['fat'],
         'image_url': entry['imageUrl'],
         'created_at': DateTime.now().toIso8601String(),
+      }).select().single();
+  
+      setState(() {
+        entry['id'] = inserted['id'];
       });
     } catch (e) {
-      debugPrint('Failed to persist food log: $e (table calories_log may not exist)');
+      debugPrint('Failed to persist food log: $e');
     }
   }
 
@@ -612,49 +694,56 @@ class _LoggingPageState extends State<LoggingPage> {
   }
 
   Widget _buildFoodRow(Map<String, dynamic> it) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              width: 78,
-              height: 78,
-              color: Colors.grey.shade100,
-              child: it['imageUrl'] != null
-                  ? Image.network(it['imageUrl'], fit: BoxFit.cover, errorBuilder: (c,e,s)=> const Icon(Icons.broken_image))
-                  : const Icon(Icons.fastfood_outlined, size: 36, color: Colors.black26),
+    return GestureDetector(
+      onTap: () => _showFoodDetail(it),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 78,
+                height: 78,
+                color: Colors.grey.shade100,
+                child: it['imageUrl'] != null
+                    ? Image.network(it['imageUrl'], fit: BoxFit.cover,
+                        errorBuilder: (c,e,s)=> const Icon(Icons.broken_image))
+                    : const Icon(Icons.fastfood_outlined, size: 36, color: Colors.black26),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  it['name'] ?? 'Food',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ' • ${(it['calories'] ?? 0).toString()} kcal\n • ${(it['carbs'] ?? 0).toString()} g carbs\n • ${(it['protein'] ?? 0).toString()} g protein\n • ${(it['fat'] ?? 0).toString()} g fat',
-                  style: const TextStyle(color: Colors.black54),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    it['name'] ?? 'Food',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    ' • ${(it['calories'] ?? 0)} kcal\n'
+                    ' • ${(it['carbs'] ?? 0)} g carbs\n'
+                    ' • ${(it['protein'] ?? 0)} g protein\n'
+                    ' • ${(it['fat'] ?? 0)} g fat',
+                    style: const TextStyle(color: Colors.black54),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              ),
             ),
-          ),
-          SizedBox(
-            width: 40,
-            child: IconButton(
-              onPressed: () => _removeEntry(it),
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            ),
-          )
-        ],
+            SizedBox(
+              width: 40,
+              child: IconButton(
+                onPressed: () => _removeEntry(it),
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,11 +28,17 @@ class _HomePageState extends State<HomePage> {
   double tdee = 0;
   double recommended = 2000;
 
+
+  List<double> weeklyPoints = List.filled(7, 0.0);
+  double blueGoalLine = 0; // tdee - recommended
+
   @override
   void initState() {
     super.initState();
-    _loadTodayLogs();
-    _loadProfile();
+    _loadProfile().then((_) async {
+      await _loadTodayLogs();
+      await _loadWeeklyPoints();
+    });
   }
 
   Future<void> _loadTodayLogs() async {
@@ -56,7 +63,7 @@ class _HomePageState extends State<HomePage> {
       totalFat = 0;
 
       for (var row in data) {
-        final meal = row["meal_type"] ?? "";
+        final meal = (row["meal_type"] ?? "").toString();
         final cal = (row["calories"] ?? 0).toDouble();
 
         if (meal == "breakfast") breakfastCal += cal;
@@ -68,7 +75,7 @@ class _HomePageState extends State<HomePage> {
         totalProtein += (row["protein"] ?? 0).toDouble();
         totalFat += (row["fat"] ?? 0).toDouble();
       }
-      setState(() {});
+      if (mounted) setState(() {});
     } catch (e) {
       debugPrint("Error fetching today's logs: $e");
     }
@@ -94,12 +101,58 @@ class _HomePageState extends State<HomePage> {
         goalPeriod = "${res["goal_period_days"] ?? 0} days";
         tdee = (res["tdee"] ?? 0).toDouble();
         recommended = (res["recommended_calories"] ?? 2000).toDouble();
+        blueGoalLine = (tdee - recommended);
       }
-      setState(() {});
+      if (mounted) setState(() {});
     } catch (e) {
       debugPrint("Error loading profile: $e");
     }
   }
+
+  Future<void> _loadWeeklyPoints() async {
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  final today = DateTime.now();
+  final sunday = today.subtract(Duration(days: today.weekday % 7));
+
+  List<double> points = List.filled(7, 0.0);
+
+  try {
+    for (int i = 0; i < 7; i++) {
+      final day = sunday.add(Duration(days: i));
+      final dayStr = DateFormat("yyyy-MM-dd").format(day);
+
+      final rows = await supabase
+          .from("calories_log")
+          .select()
+          .eq("user_id", user.id)
+          .eq("log_date", dayStr);
+
+      double dayTotal = 0;
+      for (var r in rows) {
+        dayTotal += (r["calories"] ?? 0).toDouble();
+      }
+
+      points[i] = dayTotal;  
+    }
+
+    // reorder → Mon to Sun
+    weeklyPoints = [
+      points[0], // Sun
+      points[1], // Mon
+      points[2], // Tue
+      points[3], // Wed
+      points[4], // Thu
+      points[5], // Fri
+      points[6], // Sat
+    ];
+
+    if (mounted) setState(() {});
+  } catch (e) {
+    debugPrint("Error loading weekly points: $e");
+  }
+}
 
   Widget _infoTile(String label, String value) {
     return Container(
@@ -120,8 +173,7 @@ class _HomePageState extends State<HomePage> {
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 6),
           Text(value,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -141,19 +193,167 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(title,
               style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
+                  fontSize: 14, fontWeight: FontWeight.w600, color: color)),
           const SizedBox(height: 8),
           Text("${kcal.toInt()} kcal",
               style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: color)),
+                  fontWeight: FontWeight.w700, fontSize: 15, color: color)),
         ],
       ),
     );
   }
+
+  Widget _buildWeeklyCalChart() {
+    final spots = List<FlSpot>.generate(
+      7,
+      (i) => FlSpot((i + 1).toDouble(), weeklyPoints[i]),
+    );
+
+    final List<int> yLabels = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500];
+
+    SideTitles leftTitles = SideTitles(
+      showTitles: true,
+      reservedSize: 50,
+      interval: 500, 
+      getTitlesWidget: (value, meta) {
+        if (yLabels.contains(value.toInt())) {
+          return Text(
+            value.toInt().toString(),
+            style: const TextStyle(fontSize: 12),
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+
+    SideTitles bottomTitles = SideTitles(
+      showTitles: true,
+      interval: 1,
+      getTitlesWidget: (value, meta) {
+        const labels = ['Sun','Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        final idx = value.toInt() - 1;
+        if (idx >= 0 && idx < labels.length) {
+          return Text(labels[idx], style: const TextStyle(fontSize: 12));
+        }
+        return const SizedBox.shrink();
+      },
+    );
+
+    return LineChart(
+      LineChartData(
+        minX: 1,
+        maxX: 7,
+        minY: 0,
+        maxY: 3500,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: true,
+          horizontalInterval: 500, // grid lines every 500
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.12),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(sideTitles: leftTitles),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(sideTitles: bottomTitles),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Colors.black26),
+        ),
+        lineBarsData: [
+          // RED = daily total calories
+          LineChartBarData(
+            spots: spots,
+            isCurved: false,
+            barWidth: 3,
+            color: Colors.red,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, p, bar, index) =>
+                  FlDotCirclePainter(radius: 4, color: Colors.black),
+            ),
+          ),
+
+          LineChartBarData(
+            spots: [
+              FlSpot(1, recommended.clamp(0, 3500)),
+              FlSpot(7, recommended.clamp(0, 3500)),
+            ],
+            color: Colors.blue,
+            barWidth: 2,
+            isCurved: false,
+            dotData: FlDotData(show: false),
+            dashArray: [6, 4],
+          ),
+        ],
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            tooltipBgColor: Colors.white,
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((ts) {
+                final y = ts.y.toInt();
+                return LineTooltipItem('$y kcal', const TextStyle(color: Colors.black));
+              }).toList();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartDescription() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.blue,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              "Recommended calories",
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+
+        Row(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              "Daily taken calories",
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -164,15 +364,13 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: const Text("Home",
-            style: TextStyle(color: Colors.black87)),
+        title: const Text("Home", style: TextStyle(color: Colors.black87)),
         centerTitle: true,
       ),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -214,9 +412,10 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 20),
+
               LayoutBuilder(
                 builder: (context, constraints) {
-                  double itemWidth = (constraints.maxWidth - 24) / 2; 
+                  double itemWidth = (constraints.maxWidth - 24) / 2;
                   return Wrap(
                     spacing: 12,
                     runSpacing: 12,
@@ -233,6 +432,7 @@ class _HomePageState extends State<HomePage> {
               ),
 
               const SizedBox(height: 15),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -243,8 +443,9 @@ class _HomePageState extends State<HomePage> {
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () async {
-                      await _loadTodayLogs();
                       await _loadProfile();
+                      await _loadTodayLogs();
+                      await _loadWeeklyPoints();
                     },
                   ),
                 ],
@@ -277,64 +478,66 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   children: [
                     Text("${totalCal.toInt()} / ${recommended.toInt()} kcal",
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
-
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 12,
                         backgroundColor: Colors.grey.shade300,
-                        valueColor:
-                            AlwaysStoppedAnimation(Colors.purpleAccent),
+                        valueColor: const AlwaysStoppedAnimation(Colors.purpleAccent),
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        Column(
-                          children: [
-                            const Text("Carbs",
-                                style:
-                                    TextStyle(color: Colors.black54)),
-                            Text("${totalCarb.toInt()} g",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text("Protein",
-                                style:
-                                    TextStyle(color: Colors.black54)),
-                            Text("${totalProtein.toInt()} g",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text("Fat",
-                                style:
-                                    TextStyle(color: Colors.black54)),
-                            Text("${totalFat.toInt()} g",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
+                        Column(children: [
+                          const Text("Carbs", style: TextStyle(color: Colors.black54)),
+                          Text("${totalCarb.toInt()} g", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ]),
+                        Column(children: [
+                          const Text("Protein", style: TextStyle(color: Colors.black54)),
+                          Text("${totalProtein.toInt()} g", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ]),
+                        Column(children: [
+                          const Text("Fat", style: TextStyle(color: Colors.black54)),
+                          Text("${totalFat.toInt()} g", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ]),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 25),
+              const Text("Weekly Calories Chart", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 200, 
+                      child: _buildWeeklyCalChart(),
+                    ),
+                    _buildChartDescription(),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
