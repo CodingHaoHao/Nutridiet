@@ -74,7 +74,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
 
     await _auth.signUpAndCreateProfile(
-      username: _username.text,
+      username: _username.text.trim(),
       email: _email.text,
       password: _password.text,
       birthday: _birthday.text.isEmpty ? null : _birthday.text,
@@ -106,21 +106,23 @@ class _SignUpPageState extends State<SignUpPage> {
 }
 
   String? _validateUsername(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Username is required';
-    if (v.length < 2) return 'Min 2 characters';
-    return null;
-  }
-
-  String? _validateEmail(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Email required';
-    final ok = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(v);
-    if (!ok) return 'Enter a valid email';
+    if (v == null || v.trim().isEmpty) return 'Username required';
+  
+    if (v.length < 2) {
+      return 'Min 2 characters';
+    }
+    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(v.trim())) {
+      return 'Username must contain only letters (A–Z)';
+    }
     return null;
   }
 
   String? _validatePassword(String? v) {
     if (v == null || v.isEmpty) return 'Password required';
     if (v.length < 6) return 'Min 6 characters';
+    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$').hasMatch(v)) {
+      return 'Password must contain letters and numbers';
+    }
     return null;
   }
 
@@ -130,8 +132,35 @@ class _SignUpPageState extends State<SignUpPage> {
     return null;
   }
 
+    String? _validateEmail(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Email required';
+    final ok = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v);
+    if (!ok) return 'Enter a valid email';
+    return null;
+  }
+
   String? _validateBirthday(String? v) {
     if (v == null || v.isEmpty) return 'Birthday required';
+    return null;
+  }
+
+  String? _validateHeight(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Height is required';
+    return null;
+  }
+
+  String? _validateWeight(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Weight is required';
+    return null;
+  }
+
+  String? _validateGoalWeight(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Goal weight is required';
+    return null;
+  }
+
+  String? _validateGoalPeriod(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Goal period is required';
     return null;
   }
 
@@ -152,6 +181,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _username,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Username',
                       prefixIcon: Icon(Icons.person),
@@ -160,7 +190,6 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: _validateUsername,
                   ),
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: _password,
                     obscureText: _obscurePassword,
@@ -178,7 +207,6 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: _validatePassword,
                   ),
                   const SizedBox(height: 16),
-                  
                   TextFormField(
                     controller: _confirmPassword,
                     obscureText: _obscureConfirmPassword,
@@ -254,6 +282,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       prefixIcon: Icon(Icons.height),
                       border: OutlineInputBorder(),
                     ),
+                    validator: _validateHeight,
                     onTap: () async {
                       final selectedHeight = await showModalBottomSheet<int>(
                         context: context,
@@ -312,6 +341,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       prefixIcon: Icon(Icons.monitor_weight),
                       border: OutlineInputBorder(),
                     ),
+                    validator: _validateWeight,
                     onTap: () async {
                       final selectedWeight = await showModalBottomSheet<int>(
                         context: context,
@@ -372,6 +402,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       prefixIcon: Icon(Icons.flag),
                       border: OutlineInputBorder(),
                     ),
+                    validator: _validateGoalWeight,
                     onTap: () async {
                       final selectedGoalWeight = await showModalBottomSheet<int>(
                         context: context,
@@ -430,6 +461,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       prefixIcon: Icon(Icons.calendar_today),
                       border: OutlineInputBorder(),
                     ),
+                    validator: _validateGoalPeriod,
                     onTap: () async {
                       final selectedPeriod = await showModalBottomSheet<int>(
                         context: context,

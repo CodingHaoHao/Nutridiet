@@ -66,12 +66,14 @@ class AuthService {
       int? tdee,
       int? calorieGoal, required int recommendedCalories,
     }) async {
-      final emailTrim = email.trim();
-      final usernameTrim = username.trim();
+
+      if (username.trim().isEmpty) {
+        throw Exception('Username cannot be empty');
+      }
 
       try {
         final authRes = await _client.auth.signUp(
-          email: emailTrim,
+          email: email.trim(),
           password: password.trim(),
         );
 
@@ -83,8 +85,8 @@ class AuthService {
 
         final inserted = await _client.from('account').insert({
           'user_id': userId,
-          'username': usernameTrim,
-          'email': emailTrim,
+          'username': username.trim(),
+          'email': email.trim(),
           'birthday': birthday,
           'gender': gender,
           'height': height,

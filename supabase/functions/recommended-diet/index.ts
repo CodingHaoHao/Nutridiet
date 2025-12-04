@@ -29,7 +29,7 @@ serve(async (request: Request) => {
     }
 
     const body = await request.json();
-    const { recommended_calories, special_requirements, allergies } = body;
+    const { recommended_calories, special_conditions, allergies } = body;
 
     if (!recommended_calories) {
       return new Response(
@@ -59,8 +59,8 @@ serve(async (request: Request) => {
     }
 
     // Build requirements list
-    const requirementsList = special_requirements && Array.isArray(special_requirements) && special_requirements.length > 0
-      ? special_requirements.join(", ")
+    const requirementsList = special_conditions && Array.isArray(special_conditions) && special_conditions.length > 0
+      ? special_conditions.join(", ")
       : "none";
 
     // Create a very strict prompt that emphasizes the dietary restrictions
@@ -68,8 +68,8 @@ serve(async (request: Request) => {
     You are a professional nutritionist. Create a diet plan that STRICTLY follows these requirements:
 
     CRITICAL DIETARY RESTRICTIONS (MUST BE FOLLOWED):
-    ${special_requirements && Array.isArray(special_requirements) && special_requirements.length > 0 
-      ? special_requirements.map((req: string, index: number) => `${index + 1}. ${req}`).join('\n')
+    ${special_conditions && Array.isArray(special_conditions) && special_conditions.length > 0 
+      ? special_conditions.map((req: string, index: number) => `${index + 1}. ${req}`).join('\n')
       : 'None'}
 
     ${allergies && allergies !== "none" ? `ALLERGIES TO AVOID (ABSOLUTELY NO): ${allergies}` : ''}
@@ -77,11 +77,11 @@ serve(async (request: Request) => {
     IMPORTANT RULES:
     - If "Vegetarian" is selected: NO meat, NO poultry, NO fish, NO seafood
     - If "Vegan" is selected: NO animal products at all (no meat, fish, dairy, eggs, honey)
-    - If "Diabetes" is selected: Low glycemic index foods, no added sugars, complex carbs only
-    - If "Halal" is selected: Only halal-certified foods, no pork, no alcohol
-    - If "High Blood Pressure" is selected: Low sodium, no processed foods
-    - If "High Cholesterol" is selected: Low saturated fat,
-    - If "No Any" is selected: No dietary restrictions, just provide a balanced diet
+    - If "Diabetes" is selected: Meat is available. Low glycemic index foods, no added sugars, complex carbs only
+    - If "Halal" is selected: Meat is available. But only halal-certified foods, no pork, no alcohol
+    - If "High Blood Pressure" is selected: Meat is available.Low sodium, no processed foods
+    - If "High Cholesterol" is selected: Meat is available. Make sure diet is low saturated fat,
+    - If "No Any" is selected: NO dietary restrictions, provide a normal balanced diet with variety of foods including meat, fish, vegetables, grains
 
     Target Daily Calories: <=${recommended_calories} kcal
 
@@ -114,7 +114,7 @@ serve(async (request: Request) => {
           messages: [
             {
               role: "system",
-              content: "You are a strict professional nutritionist. You MUST follow all dietary restrictions without exception. Never suggest foods that violate the user's dietary requirements. If someone is vegetarian or vegan, absolutely NO animal products in those categories. Respond ONLY in valid JSON format.",
+              content: "You are a strict professional nutritionist. You MUST follow all dietary restrictions without exception. Never suggest foods that violate the user's dietary conditions. If someone is vegetarian or vegan, absolutely NO animal products in those categories. Respond ONLY in valid JSON format.",
             },
             {
               role: "user",

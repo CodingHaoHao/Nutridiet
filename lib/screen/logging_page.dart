@@ -371,7 +371,7 @@ class _LoggingPageState extends State<LoggingPage> {
       };
       _addEntryToMeal(targetMeal, fallback, persist: true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not analyze image — saved image only.')),
+        const SnackBar(content: Text('Could not analyze image, tried to connect WIFI.')),
       );
       return;
     }
@@ -508,6 +508,47 @@ class _LoggingPageState extends State<LoggingPage> {
     }
   }
 
+  Future<double?> _fetchRecommendedCalories() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return 2000; 
+
+    try {
+      final res = await supabase
+          .from('account')
+          .select('recommended_calories')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (res == null || res['recommended_calories'] == null) return 2000;
+      return (res['recommended_calories'] as num).toDouble();
+    } catch (e) {
+      debugPrint('Error fetching recommended calories: $e');
+      return 2000;
+    }
+  }
+
+  Future<void> _removeEntry(Map<String, dynamic> item) async {
+    try {
+      final id = item['id'];
+      if (id != null) {
+        final res = await supabase.from('calories_log').delete().eq('id', id);
+        debugPrint('Delete response: $res');
+      }
+      setState(() {
+        breakfast.removeWhere((e) => e['id'] == item['id']);
+        lunch.removeWhere((e) => e['id'] == item['id']);
+        dinner.removeWhere((e) => e['id'] == item['id']);
+      });
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _loadLogsForDate(_selectedDate);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete. Please try again.')),
+      );
+    }
+  }
+
+  // Build the widget parts
   Widget _buildWeekSelector() {
     _weekStart = _selectedDate.subtract(Duration(days: _selectedDate.weekday % 7));
     if (_weekStart.weekday != DateTime.sunday) {
@@ -748,26 +789,6 @@ class _LoggingPageState extends State<LoggingPage> {
     );
   }
 
-  Future<void> _removeEntry(Map<String, dynamic> item) async {
-    try {
-      final id = item['id'];
-      if (id != null) {
-        final res = await supabase.from('calories_log').delete().eq('id', id);
-        debugPrint('Delete response: $res');
-      }
-      setState(() {
-        breakfast.removeWhere((e) => e['id'] == item['id']);
-        lunch.removeWhere((e) => e['id'] == item['id']);
-        dinner.removeWhere((e) => e['id'] == item['id']);
-      });
-      await Future.delayed(const Duration(milliseconds: 500));
-      await _loadLogsForDate(_selectedDate);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete. Please try again.')),
-      );
-    }
-  }
 
   Widget _buildNutrientOverview() {
   double totalCal = 0, totalCarb = 0, totalProtein = 0, totalFat = 0;
@@ -854,24 +875,6 @@ class _LoggingPageState extends State<LoggingPage> {
     );
   }
 
-  Future<double?> _fetchRecommendedCalories() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return 2000; 
-
-    try {
-      final res = await supabase
-          .from('account')
-          .select('recommended_calories')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      if (res == null || res['recommended_calories'] == null) return 2000;
-      return (res['recommended_calories'] as num).toDouble();
-    } catch (e) {
-      debugPrint('Error fetching recommended calories: $e');
-      return 2000;
-    }
-  }
 
   Widget _smallStat(String label, String value, Color color) {
     return Column(

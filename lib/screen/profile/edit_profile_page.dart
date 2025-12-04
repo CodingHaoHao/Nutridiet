@@ -48,7 +48,7 @@ String? _activityLevel;
       final response = await supabase
           .from('account')
           .select()
-          .eq('user_id', user.id) // ✅ FIXED
+          .eq('user_id', user.id) 
           .maybeSingle();
 
       if (response != null) {
