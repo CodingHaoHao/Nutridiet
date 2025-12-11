@@ -44,6 +44,7 @@ class _HomePageState extends State<HomePage> {
     'Vegetarian',
     'Vegan',
     'Halal',
+    'Indian',
     'Diabetes',
     'High Blood Pressure',
     'High Cholesterol',

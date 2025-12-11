@@ -29,7 +29,13 @@ serve(async (request: Request) => {
     }
 
     const body = await request.json();
-    const { recommended_calories, special_conditions, allergies } = body;
+    let { recommended_calories, special_conditions, allergies } = body;
+
+    if (Array.isArray(special_conditions)) {
+      if (special_conditions.includes("No Any")) {
+        special_conditions = []; 
+      }
+    }
 
     if (!recommended_calories) {
       return new Response(
@@ -58,47 +64,56 @@ serve(async (request: Request) => {
       );
     }
 
-    // Build requirements list
-    const requirementsList = special_conditions && Array.isArray(special_conditions) && special_conditions.length > 0
-      ? special_conditions.join(", ")
-      : "none";
+  const noRestrictions = !special_conditions || !Array.isArray(special_conditions) || special_conditions.length === 0;
 
-    // Create a very strict prompt that emphasizes the dietary restrictions
-    const userPrompt = `
-    You are a professional nutritionist. Create a diet plan that STRICTLY follows these requirements:
+  const seed = Math.floor(Math.random() * 1000000);
 
-    CRITICAL DIETARY RESTRICTIONS (MUST BE FOLLOWED):
-    ${special_conditions && Array.isArray(special_conditions) && special_conditions.length > 0 
-      ? special_conditions.map((req: string, index: number) => `${index + 1}. ${req}`).join('\n')
-      : 'None'}
+   const userPrompt = `
+    RANDOM VARIATION SEED: ${seed}
+    You are a nutritionist generating diverse meal plans. Follow restrictions but prioritize meal variety.
 
-    ${allergies && allergies !== "none" ? `ALLERGIES TO AVOID (ABSOLUTELY NO): ${allergies}` : ''}
+    CRITICAL DIETARY RESTRICTIONS:
+    ${ noRestrictions ? "None" : special_conditions.map((req: string, i: number) => `${i+1}. ${req}`).join("\n") }
 
-    IMPORTANT RULES:
-    - If "Vegetarian" is selected: NO meat, NO poultry, NO fish, NO seafood
-    - If "Vegan" is selected: NO animal products at all (no meat, fish, dairy, eggs, honey)
-    - If "Diabetes" is selected: Meat is available. Low glycemic index foods, no added sugars, complex carbs only
-    - If "Halal" is selected: Meat is available. But only halal-certified foods, no pork, no alcohol
-    - If "High Blood Pressure" is selected: Meat is available.Low sodium, no processed foods
-    - If "High Cholesterol" is selected: Meat is available. Make sure diet is low saturated fat,
-    - If "No Any" is selected: NO dietary restrictions, provide a normal balanced diet with variety of foods including meat, fish, vegetables, grains
+    ${allergies && allergies !== "none" ? `ALLERGIES TO AVOID: ${allergies}\n` : ''}
 
-    Target Daily Calories: <=${recommended_calories} kcal
+    /* IMPORTANT INSTRUCTIONS - READ CAREFULLY */
+    1) When there are NO special conditions, provide a normal balanced diet including meat, poultry, fish, vegetables, grains and dairy as appropriate.
+    2) If Vegetarian or Vegan is selected, strictly comply (no animal products for Vegan; no meat/fish for Vegetarian).
+    3) If "Diabetes" is selected: Meat is available. Low glycemic index foods, no added sugars, complex carbs only. 
+    4) If "Halal" is selected: Meat is available. But only halal-certified foods, no pork, no alcohol.
+    5) If "Indian" is selected: Meat is available. Include Indian cuisine options, ensure no beef.
+    6) If "High Blood Pressure" is selected: Meat is available.Low sodium, no processed foods.
+    7) If "High Cholesterol" is selected: Meat is available. Make sure diet is low saturated fat.
+    8) **Do NOT use fixed macro templates (e.g., do NOT always output 250g carbs or 70g fat).**
+    9) **Compute macros from the foods and portion sizes you list.** The macro numbers must reflect the foods (e.g., if you include 150g grilled chicken, protein should increase accordingly).
+    10) **Vary proteins and main dishes** across plans — do not always select grilled chicken or salmon. Prefer rotation: chicken, fish, beef, tofu, eggs, tempeh, mackerel, etc., and include Malaysian dishes where applicable.
+    11) Aim the TOTAL DAILY CALORIES close to ${recommended_calories} kcal (allow natural variation within roughly ±15%). Do not force the number exactly; estimate based on portions chosen.
+    12) Avoid repeating the same macro numbers and same protein sources in consecutive responses.
+    13) Return ONLY valid JSON (no explanation, no extra text).
+    /* VARIATION POLICY - MUST FOLLOW */
+    14) Rotate meal ideas every time. Do NOT repeat the same protein sources or dishes across different outputs. 
+    15) MUST pick different breakfast, lunch, and dinner options each call. Use wide variety:
+        - Breakfast: nasi lemak (light), roti canai (low oil), oats, sandwiches, smoothies, yogurt bowls, mee hoon soup, etc.
+        - Lunch: stir-fried beef, ayam masak merah, curry laksa (light), sushi, teriyaki chicken, nasi kerabu, tofu bowls.
+        - Dinner: steamed seabass, grilled lamb, pasta, chapati sets, tom yum (light), tofu stir fry, curry chickpeas, etc.
+    16) Vary portion sizes, cuisines, and protein sources.
+    17) You MUST avoid meal templates seen in previous outputs. Use new, creative, but realistic Malaysian or general meals.
 
-    Provide a JSON response with this EXACT structure:
+    Now produce a single JSON object exactly in this structure. For numeric fields, give realistic rounded values that are consistent with the meal descriptions and with each other:
+
     {
-      "daily_calories": <=${recommended_calories},
-      "carbs": <number in grams>,
-      "protein": <number in grams>,
-      "fat": <number in grams>,
-      "breakfast": "<meal description with specific foods and portions>",
-      "lunch": "<meal description with specific foods and portions>",
-      "dinner": "<meal description with specific foods and portions>",
-      "summary": "<2-3 sentence summary explaining how this plan meets the dietary restrictions>"
+      "daily_calories": <estimated_total_calories_based_on_meals>,
+      "carbs": <grams_estimated_from_foods>,
+      "protein": <grams_estimated_from_foods>,
+      "fat": <grams_estimated_from_foods>,
+      "breakfast": "<detailed meal description with portions, e.g., '2 eggs, 1 slice wholegrain toast, 100g mixed fruit, 1 tsp butter'>",
+      "lunch": "<detailed meal description with portions>",
+      "dinner": "<detailed meal description with portions>",
+      "summary": "<2-3 sentence summary explaining how the plan matches restrictions and estimated macros>"
     }
 
-    VERIFY: Before responding, double-check that ALL meals comply with EVERY dietary restriction listed above.
-    Return ONLY valid JSON, no markdown, no additional text.
+    VERIFY: Before returning, check that macros numerically match the foods and that the daily_calories is the sum of meal estimates. Do NOT output macro values that are identical to typical fixed templates (e.g., 250/70/120) unless the foods legitimately produce those numbers.
     `;
 
     const openaiRes = await fetch(
@@ -121,8 +136,9 @@ serve(async (request: Request) => {
               content: userPrompt,
             },
           ],
-          response_format: { type: "json_object" },
-          temperature: 0.3, // Lower temperature for more consistent, rule-following responses
+            temperature: 1.0,
+            top_p: 1.0,
+            response_format: { type: "json_object" },
         }),
       }
     );
